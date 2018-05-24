@@ -72,7 +72,7 @@ public function download_cal_to_iCal($fdata){
         $event = new Google_Service_Calendar_Event(array(
         'summary' => $results[$i]["f_title"],
         'description' => $results[$i]["f_description"],
-        'id' => "meetings".$i,
+        'id' => "meeting".$results[$i]["id"],
         'start' => array(
         'dateTime' => $this->google_date_time($results[$i]["f_time"]),
        // 'dateTime' => '2018-05-25T17:00:00+02:00',
@@ -93,7 +93,7 @@ public function download_cal_to_iCal($fdata){
           $event = new Google_Service_Calendar_Event(array(
         'summary' => $results[$i]["f_subject"],
         'description' => 'PHONE:'.$results[$i]["f_other_phone_number"].$results[$i]["f_description"],
-        'id' => "phonecalls".$i,
+        'id' => "phonecall".$results[$i]["id"],
         'start' => array(
         'dateTime' => $this->google_date_time($results[$i]["f_date_and_time"]),
        // 'dateTime' => '2018-05-25T17:00:00+02:00',
@@ -115,7 +115,7 @@ public function download_cal_to_iCal($fdata){
       $event = new Google_Service_Calendar_Event(array(
         'summary' => $results[$i]["f_title"],
         'description' => $results[$i]["f_description"],
-        'id' => "tasks".$i,
+        'id' => "task".$results[$i]["id"],
         'start' => array(
         'dateTime' => $this->google_date_time($results[$i]["f_deadline"]),
         //'dateTime' => '2018-05-25T17:00:00+02:00',
@@ -154,6 +154,7 @@ public function download_cal_to_iCal($fdata){
       unlink($path);
       $service = new Google_Service_Calendar($client);
       $calendarId = 'primary';
+      $counter = 0;
       for($x=0;$x<count($events_array);$x++){
           
       try{
@@ -164,9 +165,10 @@ public function download_cal_to_iCal($fdata){
       catch(Exception $e){
           //dodaje wydarzenie
       $event = $service->events->insert($calendarId,$events_array[$x]);  
+      $counter++;
       }
       }
-      Base_StatusBarCommon::message(__("Zsynchronizowano kalendarze"));
+      Base_StatusBarCommon::message(__("Zsynchronizowano kalendarze \n Dodano: ".$counter." wydarzeń"));
     } else {
         //wymuszenie logowania
       $redirect_uri = 'http://' . $_SERVER['HTTP_HOST'] . '/oauth2callback.php';
