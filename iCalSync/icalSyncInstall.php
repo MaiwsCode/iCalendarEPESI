@@ -6,7 +6,7 @@ class iCalSyncInstall extends ModuleInstall {
 	public function install() {
 // Here you can place installation process for the module
 		$ret = true;
-		Utils_RecordBrowserCommon::register_processing_callback('crm_calendar',array('iCalSyncCommon','add_action_bar'));
+		//Utils_RecordBrowserCommon::register_processing_callback('crm_calendar',array('iCalSyncCommon','add_action_bar'));
 		return $ret; // Return false on success and false on failure
 	}
 
@@ -22,7 +22,7 @@ public function uninstall() {
 	}
 	public function version() {
 	// Return version name of the module
-			return array('0.1'); 
+			return array('1.0'); 
 		}
 
 	public function simple_setup() {

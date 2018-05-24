@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 defined("_VALID_ACCESS") || die('Direct access forbidden'); // This is a security feature.
-require_once("zapcallib.php");  
+
 class iCalSync extends Module { // Note, how the class' name reflects module's path.
 
     
@@ -35,7 +35,7 @@ public function settings()
                 Base_ActionBarCommon::add('save', __('Save'), $form->get_submit_form_href());
 		 if($form->getSubmitValue('submited') && $form -> validate()) {
 				$this ->download_cal_to_iCal($form -> exportValues());
-                   //     Base_StatusBarCommon::message(__('Swoje zapisane pliki znajdziesz w: /home/...'));
+                                
                 }
                 $form->display();	
 	}
@@ -50,96 +50,136 @@ public function set_data($array,$array_name){
     }
     
 }
+//konwertuje czas z DB do schematu google
+public function google_date_time($date){
+    $ymd = $date;
+    $ymd = str_replace(" ", "T", $ymd);
+    $ymd = $ymd."+02:00";
+    return $ymd;
+}
 
 public function download_cal_to_iCal($fdata){
+    $events_array = array();
+    $event = NULL;
     $metings = $this ->set_data($fdata,"_me");
     $phonecalls = $this ->set_data($fdata,"_pc");
     $tasks = $this ->set_data($fdata,"_ts");
-   // $dir_path = $this -> set_data($fdata,"_dir");
-    // Base_StatusBarCommon::message(__($metings." ".$phonecalls." ".$tasks));
-    $start = "BEGIN:VCALENDAR";
-    $end = "END:VCALENDAR";
-    $calendar_string = "";
+ //dodawanie eventow do tablicy
     if($metings != ""){
      
      $results = DB::GetArray("SELECT * FROM crm_meeting_data_1 WHERE f_time > NOW()");
      for($i=0;$i<count($results);$i++){
-     $calendar_day = new ZCiCal();
-     $event = new ZCiCalNode("VEVENT",$calendar_day->curnode);
-     $event->addNode(new ZCiCalDataNode("SUMMARY:" .$results[$i]["f_title"] ));
-     $event->addNode(new ZCiCalDataNode("DTSTART:" . ZCiCal::fromSqlDateTime($results[$i]["f_time"])));
-     $event->addNode(new ZCiCalDataNode("DTEND:" . ZCiCal::fromSqlDateTime($results[$i]["f_time"])));
-     $uid = date('Y-m-d-H-i-s') . "@EPESI-EXPORT".$i.(rand(0, 1000));
-     $event->addNode(new ZCiCalDataNode("UID:" . $uid));
-     if($results[$i]["f_description"] != ""){
-     $event->addNode(new ZCiCalDataNode("Description:" . ZCiCal::formatContent(
-             $results[$i]["f_description"])));
-     }
-     $event->addNode(new ZCiCalDataNode("DTSTAMP:" . ZCiCal::fromSqlDateTime()));
-     $toString = $calendar_day->export();
-     $toString = str_replace("BEGIN:VCALENDAR", "", $toString);
-     $toString = str_replace("END:VCALENDAR", "", $toString);
-        $toString = trim($toString,"\n\t");
-       // $toString = "\n".$toString;
-    // $calendar_string .= $calendar_day->export();
-     $calendar_string .= $toString."\n\r";
+        $event = new Google_Service_Calendar_Event(array(
+        'summary' => $results[$i]["f_title"],
+        'description' => $results[$i]["f_description"],
+        'id' => "meetings".$i,
+        'start' => array(
+        'dateTime' => $this->google_date_time($results[$i]["f_time"]),
+       // 'dateTime' => '2018-05-25T17:00:00+02:00',
+        'timeZone' => 'Europe/Warsaw',
+        ),
+        'end' => array(
+        'dateTime' => $this->google_date_time($results[$i]["f_time"]),
+       // 'dateTime' => '2018-05-25T17:00:00+02:00',
+        'timeZone' => 'Europe/Warsaw',
+        ),
+        ));
+      array_push($events_array, $event);    
         }    
     }
     if($phonecalls != ""){
      $results = DB::GetArray("SELECT * FROM phonecall_data_1 WHERE f_date_and_time > NOW()");
      for($i=0;$i<count($results);$i++){
-        $calendar_day = new ZCiCal();
-        $event = new ZCiCalNode("VEVENT",$calendar_day->curnode);
-        $event->addNode(new ZCiCalDataNode("SUMMARY:" .$results[$i]["f_subject"] ));
-        $event->addNode(new ZCiCalDataNode("DTSTART:" . ZCiCal::fromSqlDateTime($results[$i]["f_date_and_time"])));
-        $event->addNode(new ZCiCalDataNode("DTEND:" . ZCiCal::fromSqlDateTime($results[$i]["f_date_and_time"])));
-        $uid = date('Y-m-d-H-i-s') . "@EPESI-EXPORT".$i.rand(0, 1000);
-        $event->addNode(new ZCiCalDataNode("UID:" . $uid));
-        if($results[$i]["f_description"] != ""){
-        $event->addNode(new ZCiCalDataNode("Description:" . ZCiCal::formatContent(
-        "PHONE: ".$results[$i]["f_other_phone_number"].$results[$i]["f_description"])));
-        }
-        $event->addNode(new ZCiCalDataNode("DTSTAMP:" . ZCiCal::fromSqlDateTime()));
-        $toString = $calendar_day->export();
-        $toString = str_replace("BEGIN:VCALENDAR", "", $toString);
-        $toString = str_replace("END:VCALENDAR", "", $toString);
-        $toString = trim($toString,"\n\t");
-        //$calendar_string .= $calendar_day->export();
-        $calendar_string .= $toString."\n\r";
+          $event = new Google_Service_Calendar_Event(array(
+        'summary' => $results[$i]["f_subject"],
+        'description' => 'PHONE:'.$results[$i]["f_other_phone_number"].$results[$i]["f_description"],
+        'id' => "phonecalls".$i,
+        'start' => array(
+        'dateTime' => $this->google_date_time($results[$i]["f_date_and_time"]),
+       // 'dateTime' => '2018-05-25T17:00:00+02:00',
+        'timeZone' => 'Europe/Warsaw',
+        ),
+        'end' => array(
+        'dateTime' => $this->google_date_time($results[$i]["f_date_and_time"]),
+       // 'dateTime' => '2018-05-25T17:00:00+02:00',
+        'timeZone' => 'Europe/Warsaw',
+        ),
+        ));
+      array_push($events_array, $event);    
         }
     }
     if($tasks != ""){
      $results = DB::GetArray("SELECT * FROM task_data_1 WHERE f_deadline > NOW()");
      for($i=0;$i<count($results);$i++){
-        $calendar_day = new ZCiCal();
-        $event = new ZCiCalNode("VEVENT",$calendar_day->curnode);
-        $event->addNode(new ZCiCalDataNode("SUMMARY:" .$results[$i]["f_title"] ));
-        $event->addNode(new ZCiCalDataNode("DTSTART:" . ZCiCal::fromSqlDateTime($results[$i]["f_deadline"])));
-        $event->addNode(new ZCiCalDataNode("DTEND:" . ZCiCal::fromSqlDateTime($results[$i]["f_deadline"])));
-        $uid = date('Y-m-d-H-i-s') . "@EPESI-EXPORT".$i.rand(0, 1000);
-        $event->addNode(new ZCiCalDataNode("UID:" . $uid));
-        if($results[$i]["f_description"] != ""){
-        $event->addNode(new ZCiCalDataNode("Description:" . ZCiCal::formatContent($results[$i]["f_description"])));
-        }
-        $event->addNode(new ZCiCalDataNode("DTSTAMP:" . ZCiCal::fromSqlDateTime()));
-        $toString = $calendar_day->export();
-        $toString = str_replace("BEGIN:VCALENDAR", "", $toString);
-        $toString = str_replace("END:VCALENDAR", "", $toString);
-        $toString = trim($toString,"\n\t");
-        //$toString = "\n".$toString;
-        //$calendar_string .= $calendar_day->export();
-        $calendar_string .= $toString."\n\r";
 
+      $event = new Google_Service_Calendar_Event(array(
+        'summary' => $results[$i]["f_title"],
+        'description' => $results[$i]["f_description"],
+        'id' => "tasks".$i,
+        'start' => array(
+        'dateTime' => $this->google_date_time($results[$i]["f_deadline"]),
+        //'dateTime' => '2018-05-25T17:00:00+02:00',
+        'timeZone' => 'Europe/Warsaw',
+        ),
+        'end' => array(
+        'dateTime' => $this->google_date_time($results[$i]["f_deadline"]),
+       // 'dateTime' => '2018-05-25T17:00:00+02:00',
+        'timeZone' => 'Europe/Warsaw',
+        ),
+        ));
+      array_push($events_array, $event);    
         }
     }
-    $calendar_string = $start."\n".$calendar_string."\n".$end;
-    //$cal = trim($calendar_string,"\n");
+  /*  $calendar_string = $start."\n".$calendar_string."\n".$end;
     $calendar_string = rtrim(preg_replace("/(^[\r\n]*|[\n]+)[\s\t]*[\n]+/", "\n", $calendar_string));
     $calendarFile = fopen($_SERVER['DOCUMENT_ROOT']."/iCalendar.ics", "w");
-    fputs($calendarFile,$calendar_string);
-    Base_StatusBarCommon::message(__("Kalendarz został zapisany w: \n ".$_SERVER['DOCUMENT_ROOT']));
-   
+    fputs($calendarFile,$calendar_string);*/
+  
+
+    //save to google calendar
+    //zapis do google calendar
+    $client = new Google_Client();
+    //sciezka do pliku z Google Console
+    $client->setAuthConfig($_SERVER['DOCUMENT_ROOT']."/modules/iCalSync/client_secret.json");
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+    ////tymczasowy token google auth
+    $path = $_SERVER['DOCUMENT_ROOT']."/modules/iCalSync/temp_tokens/temp_token.txt";
+    $file = fopen($path,"r");
+    $token = fread($file,filesize($path));
+    $token_array = unserialize($token);
+    fclose($file);
+    if (strlen($token)>0) {
+      $client->setAccessToken($token_array);
+      //usuwany token
+      unlink($path);
+      $service = new Google_Service_Calendar($client);
+      $calendarId = 'primary';
+      for($x=0;$x<count($events_array);$x++){
+          
+      try{
+          //sprawdza czy istnieje juz to wydarzenie
+      $event = $service->events->get('primary',$events_array[$x]["id"]);  
+      
+      }
+      catch(Exception $e){
+          //dodaje wydarzenie
+      $event = $service->events->insert($calendarId,$events_array[$x]);  
+      }
+      }
+      Base_StatusBarCommon::message(__("Zsynchronizowano kalendarze"));
+    } else {
+        //wymuszenie logowania
+      $redirect_uri = 'http://' . $_SERVER['HTTP_HOST'] . '/oauth2callback.php';
+      Epesi::redirect(filter_var($redirect_uri, FILTER_SANITIZE_URL));
+
+    }
+    
+    
+}
     
 }
 
-}
+?>
+
+
+
