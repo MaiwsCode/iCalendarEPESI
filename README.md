@@ -1,7 +1,7 @@
 # iCalendarEPESI<br>
-Synchronizacja kalendarza EPESI z kalendarzem Google<br>
-Instrukcja:<br>
-Folder iCalSync skopiuj do folderu modules EPESI<br>
+<h1>Synchronizacja kalendarza EPESI z kalendarzem Google <h1><br>
+<b>Instrukcja:<b><br>
+  Folder <span style='color:lightblue';>iCalSync</span> skopiuj do folderu modules EPESI<br>
 Plik z folderu Home dodaj do głownego katalogu Twojego WWW tak aby był do niego dostęp z http://TwojaDomena/oauth2callback.php<br>
 Zainstaluj aplikacje w Administrator -> Administracja modułami i Sklep<br>
 Twoja aplikacja jest dostępną pod Menu -> Moje ustawienia -> Panel sterowania<br>
